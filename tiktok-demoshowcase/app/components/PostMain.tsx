@@ -5,6 +5,7 @@ import { PostMainCompTypes } from "../types";
 import Link from "next/link"
 import { ImMusic } from "react-icons/im";
 import { AiFillHeart } from "react-icons/ai";
+import PostMainLikes from "./PostMainLikes";
 
 export default function PostMain({ post}: PostMainCompTypes) {
     
@@ -69,7 +70,7 @@ export default function PostMain({ post}: PostMainCompTypes) {
                             />
                         </div>
                         
-                    
+                        <PostMainLikes post={post} />
                     </div>
                 </div>
             </div>
