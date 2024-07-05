@@ -1,4 +1,5 @@
 import Link from "next/link"
+import debounce from "debounce";
 import { useRouter, usePathname } from "next/navigation"
 import { BiSearch, BiUser } from "react-icons/bi"
 import { AiOutlinePlus } from "react-icons/ai"
@@ -7,8 +8,9 @@ import { FiLogOut } from "react-icons/fi"
 import { useEffect, useState } from "react"
 import { useUser } from "@/app/context/user"
 import { useGeneralStore } from "@/app/stores/general"
+import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl"
 import { RandomUsers } from "@/app/types"
-
+import useSearchProfilesByName from "@/app/hooks/useSearchProfilesByName";
 
 export default function TopNav() {    
     const userContext = useUser()
@@ -21,7 +23,7 @@ export default function TopNav() {
 
     useEffect(() => { setIsEditProfileOpen(false) }, [])
 
-    /*const handleSearchName = debounce(async (event: { target: { value: string } }) => {
+    const handleSearchName = debounce(async (event: { target: { value: string } }) => {
         if (event.target.value == "") return setSearchProfiles([])
 
         try {
@@ -33,7 +35,7 @@ export default function TopNav() {
             setSearchProfiles([])
             alert(error)
         }
-    }, 500)*/
+    }, 500)
 
     const goTo = () => {
         if (!userContext?.user) return setIsLoginOpen(true)
@@ -52,7 +54,7 @@ export default function TopNav() {
                     <div className="relative hidden md:flex items-center justify-end bg-[#F1F1F2] p-1 rounded-full max-w-[430px] w-full">
                             <input 
                                 type="text" 
-                                //onChange={handleSearchName}
+                                onChange={handleSearchName}
                                 className="w-full pl-3 my-2 bg-transparent placeholder-[#838383] text-[15px] focus:outline-none"
                                 placeholder="Search accounts"
                             />
@@ -66,7 +68,7 @@ export default function TopNav() {
                                                 className="flex items-center justify-between w-full cursor-pointer hover:bg-[#F12B56] p-1 px-2 hover:text-white"
                                             >
                                                 <div className="flex items-center">
-                                                    <img className="rounded-md" width="40" src={profile?.image} />
+                                                    <img className="rounded-md" width="40" src={useCreateBucketUrl(profile?.image)} />
                                                     <div className="truncate ml-2">{ profile?.name }</div>
                                                 </div>
                                             </Link>
@@ -108,7 +110,7 @@ export default function TopNav() {
                                         onClick={() => setShowMenu(showMenu = !showMenu)} 
                                         className="mt-1 border border-gray-200 rounded-full"
                                     >
-                                        <img className="rounded-full w-[35px] h-[35px]" src={userContext?.user?.image || ''} />
+                                        <img className="rounded-full w-[35px] h-[35px]" src={useCreateBucketUrl(userContext?.user?.image || '')} />
                                     </button>
                                     
                                     {showMenu ? (

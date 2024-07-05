@@ -1,23 +1,42 @@
-import { CropperDimensions, ShowErrorObject } from "@/app/types";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { AiOutlineClose } from "react-icons/ai";
-import { BiLoaderCircle } from "react-icons/bi";
-import { BsPencil } from "react-icons/bs";
+import { useEffect, useState } from "react"
+import { Cropper } from 'react-advanced-cropper';
+import 'react-advanced-cropper/dist/style.css'
 import TextInput from "../TextInput";
-import { Cropper } from "react-advanced-cropper";
-
+import { BsPencil } from "react-icons/bs";
+import { AiOutlineClose } from "react-icons/ai";
+import { useUser } from "@/app/context/user";
+import { useRouter } from "next/navigation";
+import { BiLoaderCircle } from "react-icons/bi";
+import { CropperDimensions, ShowErrorObject } from "@/app/types";
+import { useProfileStore } from "@/app/stores/profile";
+import { useGeneralStore } from "@/app/stores/general";
+import useUpdateProfile from "@/app/hooks/useUpdateProfile";
+import useChangeUserImage from "@/app/hooks/useChangeUserImage";
+import useUpdateProfileImage from "@/app/hooks/useUpdateProfileImage";
+import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl";
+ 
 export default function EditProfileOverlay() {
+    
+    let { currentProfile, setCurrentProfile } = useProfileStore()
+    let { setIsEditProfileOpen } = useGeneralStore()
+
+    const contextUser = useUser()
     const router = useRouter()
 
     const [file, setFile] = useState<File | null>(null);
     const [cropper, setCropper] = useState<CropperDimensions | null>(null);
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-    const [userImage, setUserImage] = useState<string | ''>('https://placehold.co/400');
+    const [userImage, setUserImage] = useState<string | ''>('');
     const [userName, setUserName] = useState<string | ''>('');
     const [userBio, setUserBio] = useState<string | ''>('');
     const [isUpdating, setIsUpdating] = useState(false);
     const [error, setError] = useState<ShowErrorObject | null>(null)
+
+    useEffect(() => {
+        setUserName(currentProfile?.name || '')
+        setUserBio(currentProfile?.bio || '')
+        setUserImage(currentProfile?.image || '')
+    }, [])
 
     const getUploadedImage = (event: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = event.target.files && event.target.files[0];
@@ -31,7 +50,46 @@ export default function EditProfileOverlay() {
         }
     }
 
-    
+    const updateUserInfo = async () => {
+        let isError = validate()
+        if (isError) return
+        if (!contextUser?.user) return
+        
+        try {
+            setIsUpdating(true)
+            await useUpdateProfile(currentProfile?.id || '', userName, userBio)
+            setCurrentProfile(contextUser?.user?.id)
+            setIsEditProfileOpen(false)
+            router.refresh()
+            
+        } catch (error) {
+            console.log(error)
+        }
+    }
+
+    const cropAndUpdateImage = async () => {
+        let isError = validate()
+        if (isError) return
+        if (!contextUser?.user) return
+
+        try {
+            if (!file) return alert('You have no file')
+            if (!cropper) return alert('You have no file')
+            setIsUpdating(true)
+
+            const newImageId = await useChangeUserImage(file, cropper, userImage)
+            await useUpdateProfileImage(currentProfile?.id || '', newImageId)
+
+            await contextUser.checkUser()
+            setCurrentProfile(contextUser?.user?.id)
+            setIsEditProfileOpen(false)
+            setIsUpdating(false)
+        } catch (error) {
+            console.log(error)
+            setIsUpdating(false)
+            alert(error)
+        }
+    }
 
     const showError = (type: string) => {
         if (error && Object.entries(error).length > 0 && error?.type == type) {
@@ -40,11 +98,18 @@ export default function EditProfileOverlay() {
         return ''
     }
 
-    const cropAndUpdateImage = () => {
-        console.log('cropAndUpdateItem')
+    const validate = () => {
+        setError(null)
+        let isError = false
+
+        if (!userName) {
+            setError({ type: 'userName', message: 'A Username is required'})
+            isError = true
+        } 
+        return isError
     }
 
-    return(
+    return (
         <>
             <div 
                 id="EditProfileOverlay" 
@@ -62,6 +127,7 @@ export default function EditProfileOverlay() {
                         </h1>
                         <button 
                             disabled={isUpdating} 
+                            onClick={() => setIsEditProfileOpen(false)} 
                             className="hover:bg-gray-200 p-1 rounded-full"
                         >
                             <AiOutlineClose size="25"/>
@@ -83,7 +149,7 @@ export default function EditProfileOverlay() {
                                     <div className="flex items-center justify-center sm:-mt-6">
                                         <label htmlFor="image" className="relative cursor-pointer">
 
-                                            <img className="rounded-full" width="95" src={userImage} />
+                                            <img className="rounded-full" width="95" src={useCreateBucketUrl(userImage)} />
 
                                             <button className="absolute bottom-0 right-0 rounded-full bg-white shadow-xl border p-1 border-gray-300 inline-block w-[32px] h-[32px]">
                                                 <BsPencil size="17" className="ml-0.5"/>
@@ -183,6 +249,7 @@ export default function EditProfileOverlay() {
 
                                 <button 
                                     disabled={isUpdating}
+                                    onClick={() => setIsEditProfileOpen(false)}
                                     className="flex items-center border rounded-sm px-3 py-[6px] hover:bg-gray-100"
                                 >
                                     <span className="px-2 font-medium text-[15px]">Cancel</span>
@@ -190,6 +257,7 @@ export default function EditProfileOverlay() {
 
                                 <button 
                                     disabled={isUpdating}
+                                    onClick={() => updateUserInfo()}
                                     className="flex items-center bg-[#F02C56] text-white border rounded-md ml-3 px-3 py-[6px]"
                                 >
                                     <span className="mx-4 font-medium text-[15px]">
@@ -225,5 +293,4 @@ export default function EditProfileOverlay() {
             </div>
         </>
     )
-
 }

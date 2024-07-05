@@ -3,6 +3,7 @@ import { SiSoundcharts } from "react-icons/si"
 import { BiErrorCircle } from "react-icons/bi"
 import { useEffect } from "react"
 import Link from "next/link"
+import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl"
 import { PostUserCompTypes } from "@/app/types"
 
 export default function PostUser({ post }: PostUserCompTypes) {
@@ -14,6 +15,7 @@ export default function PostUser({ post }: PostUserCompTypes) {
             video.addEventListener('mouseenter', () => { video.play() })
             video.addEventListener('mouseleave', () => { video.pause() })
         }, 50)
+
     }, [])
 
     return (
@@ -30,7 +32,7 @@ export default function PostUser({ post }: PostUserCompTypes) {
                             muted
                             loop
                             className="aspect-[3/4] object-cover rounded-md" 
-                            src={post.video_url}
+                            src={useCreateBucketUrl(post.video_url)}
                         />
                     </Link>
                 )}

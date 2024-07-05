@@ -3,36 +3,49 @@
 import ClientOnly from "@/app/components/ClientOnly";
 import Comments from "@/app/components/post/Comments";
 import CommentsHeader from "@/app/components/post/CommentsHeader";
+import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl";
+import { useCommentStore } from "@/app/stores/comment";
+import { useLikeStore } from "@/app/stores/like";
+import { usePostStore } from "@/app/stores/post";
 import { PostPageTypes } from "@/app/types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { AiOutlineClose } from "react-icons/ai";
 import { BiChevronDown, BiChevronUp } from "react-icons/bi";
 
 export default function Post({ params }: PostPageTypes) {
 
-    const postById = {
-        id:'123',
-        user_id: '456',
-        video_url: '/dog.mp4',
-        text: 'temp text',
-        created_at: 'date',
-        profile: {
-            user_id:'456',
-            name:'Random user',
-            image: 'https://placehold.co/100',
-        }
-    }
-
+    let { postById, postsByUser, setPostById, setPostsByUser } = usePostStore()
+    let { setLikesByPost } = useLikeStore()
+    let { setCommentsByPost } = useCommentStore()
+    
     const router = useRouter()
 
+    useEffect(() => { 
+        setPostById(params.postId)
+        setCommentsByPost(params.postId) 
+        setLikesByPost(params.postId)
+        setPostsByUser(params.userId) 
+    }, [])
+
+
     const loopThroughPostsUp = () => {
-        console.log('loopThroughPostUp')
+        postsByUser.forEach(post => {
+            if (post.id > params.postId) {
+                router.push(`/post/${post.id}/${params.userId}`)
+            }
+        });
     }
 
     const loopThroughPostsDown = () => {
-        console.log('loopThroughPostDown')
+        postsByUser.forEach(post => {
+            if (post.id < params.postId) {
+                router.push(`/post/${post.id}/${params.userId}`)
+            }
+        });
     }
+
 
     return (
         <>
@@ -74,19 +87,19 @@ export default function Post({ params }: PostPageTypes) {
                         {postById?.video_url ? (
                             <video 
                                 className="fixed object-cover w-full my-auto z-[0] h-screen" 
-                                src="/dog.mp4"
+                                src={useCreateBucketUrl(postById?.video_url)}
                             />
                         ) : null}
 
                         <div className="bg-black bg-opacity-70 lg:min-w-[480px] z-10 relative">
-                            {true ? (
+                            {postById?.video_url ? (
                                 <video 
                                     autoPlay
                                     controls
                                     loop
                                     muted
                                     className="h-screen mx-auto" 
-                                    src="/dog.mp4"
+                                    src={useCreateBucketUrl(postById?.video_url)}
                                 />
                             ) : null}
                         </div>
