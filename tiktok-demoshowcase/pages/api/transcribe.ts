@@ -38,25 +38,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const form = new formidable.IncomingForm();
+  const tempDir = path.join(process.cwd(), 'public');
+  const filePath = path.join(tempDir, `temp_audio_${Date.now()}.wav`);
 
-  form.parse(req, async (err: any, fields: Fields, files: Files) => {
-    if (err) {
-      return res.status(500).json({ error: 'Error parsing the files' });
-    }
+  const writeStream = fs.createWriteStream(filePath);
+  req.pipe(writeStream);
 
-    // Ensure files.audio is properly handled
-    const audioFile = Array.isArray(files.audio) ? files.audio[0] : files.audio;
-    if (!audioFile) {
-      return res.status(400).json({ error: 'No audio file provided' });
-    }
-
-    const tempDir = path.join(process.cwd(), 'public');
-    const filePath = path.join(tempDir, audioFile.newFilename);
-
-    // Ensure the file is saved correctly
-    fs.renameSync(audioFile.filepath, filePath);
-
+  req.on('end', async () => {
     try {
       const translation = await openai.audio.translations.create({
         file: fs.createReadStream(filePath),
@@ -76,17 +64,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
 
       const command = response.choices?.[0]?.message?.content?.trim();
-      
+
+      console.log(command);
 
       fs.unlinkSync(filePath);
 
       res.status(200).json({ command });
     } catch (error: any) {
-   
       if (fs.existsSync(filePath)) {
         fs.unlinkSync(filePath);
       }
       res.status(500).json({ error: error.message });
     }
+  });
+
+  req.on('error', (err) => {
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    res.status(500).json({ error: 'Error reading file' });
   });
 }

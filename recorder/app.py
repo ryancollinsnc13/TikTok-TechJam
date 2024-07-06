@@ -49,24 +49,26 @@ def continuous_recording(callback):
         channels=1,
         rate=porcupine.sample_rate,
         input=True,
-        frames_per_buffer=porcupine.frame_length
+        frames_per_buffer=porcupine.frame_length * 4  # Increase buffer size
     )
     
     pre_buffer = deque(maxlen=5) 
     recording = False
     recorded_audio = []
     silence_start_time = None
-    silence_duration = 1.0 
+    silence_duration = 1.7
 
     try:
         while True:
-            pcm = audio_stream.read(porcupine.frame_length)
-            pcm = np.frombuffer(pcm, dtype=np.int16)
+            try:
+                pcm = audio_stream.read(porcupine.frame_length, exception_on_overflow=False)
+                pcm = np.frombuffer(pcm, dtype=np.int16)
+            except IOError as e:
+                print(f"Audio input overflow: {e}")
+                continue  # Skip this frame and continue
             
-        
             pre_buffer.append(pcm)
 
- 
             keyword_index = porcupine.process(pcm)
             if keyword_index >= 0:
                 print("Wake word detected!")
@@ -102,6 +104,7 @@ def continuous_recording(callback):
         if cobra is not None:
             cobra.delete()
 
+
 def process_audio(buffer):
     print("Processing audio buffer")
 
@@ -116,11 +119,11 @@ def process_audio(buffer):
     send_to_nextjs(temp_audio_path)
 def send_to_nextjs(audio_path):
     with open(audio_path, 'rb') as f:
-        response = requests.post('http://localhost:3000/api/transcribe', files={'audio': f})
+        response = requests.post('http://localhost:3000/api/transcribe', data=f)
         if response.status_code == 200:
             print("Audio successfully sent to Next.js API")
         else:
-            print("Failed to send audio to Next.js API")
+            print(f"Failed to send audio to Next.js API: {response.status_code}, {response.text}")
     os.remove(audio_path)
 
 @app.route('/start-recording', methods=['POST'])
