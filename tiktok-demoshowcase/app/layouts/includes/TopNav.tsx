@@ -11,12 +11,13 @@ import { useGeneralStore } from "@/app/stores/general"
 import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl"
 import { RandomUsers } from "@/app/types"
 import useSearchProfilesByName from "@/app/hooks/useSearchProfilesByName"
-import io from "socket.io-client"
+import { useWebSocket } from "@/app/context/WebSocketContext"
 
 export default function TopNav() {
     const userContext = useUser()
     const router = useRouter()
     const pathname = usePathname()
+    const socket = useWebSocket()
 
     const [searchProfiles, setSearchProfiles] = useState<RandomUsers[]>([])
     let [showMenu, setShowMenu] = useState<boolean>(false)
@@ -44,33 +45,32 @@ export default function TopNav() {
     }
 
     useEffect(() => {
-        const socket = io("http://0.0.0.0:5001", {
-            transports: ["websocket"],
-            reconnectionAttempts: 3,
-            timeout: 10000,
-            reconnectionDelay: 1000,
-        })
-
-        socket.on("connect", () => {
-            console.log("Connected to WebSocket server")
-        })
+        if (!socket) return;
 
         socket.on("command", (data) => {
-            console.log("Command received:", data.command)
+            console.log("Command received:", data.command);
             if (data.command === '1') {
-                router.push("/")
+                router.push("/");
+            }else if (data.command === '2') {
+                router.push("/upload");
+            } else if (data.command === '3') {
+                const userId = userContext?.user?.id;
+                if (userId) {
+                    router.push(`/profile/${userId}`);
+                }
+            }else if (data.command === '9') {
+                window.scrollTo({
+                    top: document.documentElement.scrollHeight,
+                    behavior: 'smooth'
+                });
             }
             // Handle other commands as needed
-        })
-
-        socket.on("connect_error", (err) => {
-            console.error("Connection Error:", err)
-        })
+        });
 
         return () => {
-            socket.disconnect()
-        }
-    }, [router])
+            socket.off("command");
+        };
+    }, [router, socket, userContext]);
 
     return (
         <>

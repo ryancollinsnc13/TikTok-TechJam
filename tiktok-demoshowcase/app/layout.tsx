@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import UserProvider from "./context/user";
 import AllOverlays from "./components/AllOverlays";
+import { WebSocketProvider } from "./context/WebSocketContext"
 
 export const metadata: Metadata = {
   title: "TikTok TechJam",
@@ -15,12 +16,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <UserProvider>
-        <body>
-          <AllOverlays />
-          {children}
-        </body>
-      </UserProvider>
+      <WebSocketProvider>
+        <UserProvider>
+          <body>
+            <AllOverlays />
+            {children}
+          </body>
+        </UserProvider>
+      </WebSocketProvider>
     </html>
   );
 }

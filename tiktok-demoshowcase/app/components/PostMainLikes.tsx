@@ -11,6 +11,7 @@ import useGetLikesByPostId from "../hooks/useGetLikesByPostId"
 import useIsLiked from "../hooks/useIsLiked"
 import useCreateLike from "../hooks/useCreateLike"
 import useDeleteLike from "../hooks/useDeleteLike"
+import { useWebSocket } from "@/app/context/WebSocketContext"
 
 export default function PostMainLikes({ post }: PostMainLikesCompTypes) {
 
@@ -22,6 +23,7 @@ export default function PostMainLikes({ post }: PostMainLikesCompTypes) {
     const [userLiked, setUserLiked] = useState<boolean>(false)
     const [comments, setComments] = useState<Comment[]>([])
     const [likes, setLikes] = useState<Like[]>([])
+    const socket  = useWebSocket()
 
     useEffect(() => { 
         getAllLikesByPost()
@@ -29,6 +31,26 @@ export default function PostMainLikes({ post }: PostMainLikesCompTypes) {
     }, [post])
 
     useEffect(() => { hasUserLikedPost() }, [likes, contextUser])
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on("command", (data) => {
+            console.log("Command received:", data.command);
+            if (data.command === '1') {
+                router.push("/");
+            }else if (data.command === '5') {
+                console.log("Triggering likeOrUnlike function");
+                console.log("contextUser:", contextUser);
+                likeOrUnlike();
+            }
+            // Handle other commands as needed
+        });
+
+        return () => {
+            socket.off("command");
+        };
+    }, [socket, contextUser, likes, post]);
 
     const getAllCommentsByPost = async () => {
         let result = await useGetCommentsByPostId(post?.id)
