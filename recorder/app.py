@@ -142,7 +142,7 @@ async def process_audio(buffer):
 async def transcribe_and_identify_command(audio_path):
     with open(audio_path, 'rb') as f:
         # Update to new OpenAI API method for transcription
-        transcript_text = openai.audio.transcriptions.create(
+        transcript_text = openai.audio.translations.create(
             model="whisper-1", 
             file=f,
             response_format="text"
