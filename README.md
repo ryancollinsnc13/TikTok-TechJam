@@ -36,7 +36,7 @@ Follow these steps to run a test build of Tikki:
    git clone https://github.com/ryancollinsnc13/TikTok-TechJam.git
    cd TikTok-TechJam
    ```
-2. **Set Up the Tikki (Web Server)**:
+2. **Set Up Tikki (Web Server)**:
    - Navigate to the recorder directory:
      ```bash
      cd recorder
