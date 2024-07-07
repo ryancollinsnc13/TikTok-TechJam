@@ -1,24 +1,45 @@
-from flask import Flask, request, jsonify
-from flask_cors import CORS
+from quart import Quart, request, jsonify
+from quart_cors import cors
 import pyaudio
 import numpy as np
 import pvporcupine
 import pvcobra
 import wave
 import os
-import requests
 import platform
 import time
 from dotenv import load_dotenv
 from collections import deque
+import openai
+import tempfile
+import socketio
 
-
-load_dotenv('.env.local')
+load_dotenv('.env')
 
 access_key = os.getenv('PICOVOICE_ACCESS_KEY')
+openai_api_key = os.getenv('OPENAI_API_KEY')
 
-app = Flask(__name__)
-CORS(app)
+openai.api_key = openai_api_key
+
+app = Quart(__name__)
+app = cors(app)
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
+sio_app = socketio.ASGIApp(sio, app)
+
+commands = [
+    '1: Go to For You Page',
+    '2: Upload a video',
+    '3: Go to my profile page',
+    '4: Log out',
+    '5: Like this video',
+    '6: Leave a comment', 
+    '7: Search for text', 
+    '8: Go to video owner profile',
+    '9: Scroll to next video',
+    '10: Edit profile',
+    '11: Change name',
+    '12: Change bio',
+]
 
 def get_keyword_path():
     system_platform = platform.system()
@@ -38,7 +59,7 @@ porcupine = pvporcupine.create(
 
 cobra = pvcobra.create(access_key=access_key)
 
-def continuous_recording(callback):
+async def continuous_recording(callback):
     global pa
     global audio_stream
 
@@ -49,7 +70,7 @@ def continuous_recording(callback):
         channels=1,
         rate=porcupine.sample_rate,
         input=True,
-        frames_per_buffer=porcupine.frame_length * 4  # Increase buffer size
+        frames_per_buffer=porcupine.frame_length * 4
     )
     
     pre_buffer = deque(maxlen=5) 
@@ -65,7 +86,7 @@ def continuous_recording(callback):
                 pcm = np.frombuffer(pcm, dtype=np.int16)
             except IOError as e:
                 print(f"Audio input overflow: {e}")
-                continue  # Skip this frame and continue
+                continue
             
             pre_buffer.append(pcm)
 
@@ -86,7 +107,7 @@ def continuous_recording(callback):
                     elif time.time() - silence_start_time > silence_duration:
                         recording = False
                         print("User stopped talking!")
-                        callback(np.concatenate(recorded_audio))
+                        await callback(np.concatenate(recorded_audio))
                         recorded_audio = []
                         pre_buffer.clear()
                 else:
@@ -104,32 +125,61 @@ def continuous_recording(callback):
         if cobra is not None:
             cobra.delete()
 
-
-def process_audio(buffer):
+async def process_audio(buffer):
     print("Processing audio buffer")
 
-    temp_audio_path = 'audio/temp_audio.wav'
-    with wave.open(temp_audio_path, 'wb') as wf:
-        wf.setnchannels(1)
-        wf.setsampwidth(2)
-        wf.setframerate(16000)
-        wf.writeframes(buffer.tobytes())
+    with tempfile.NamedTemporaryFile(delete=False, suffix='.wav') as temp_audio_file:
+        with wave.open(temp_audio_file, 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(16000)
+            wf.writeframes(buffer.tobytes())
+        
+        temp_audio_path = temp_audio_file.name
+    
+    await transcribe_and_identify_command(temp_audio_path)
 
-
-    send_to_nextjs(temp_audio_path)
-def send_to_nextjs(audio_path):
+async def transcribe_and_identify_command(audio_path):
     with open(audio_path, 'rb') as f:
-        response = requests.post('http://localhost:3000/api/transcribe', data=f)
-        if response.status_code == 200:
-            print("Audio successfully sent to Next.js API")
-        else:
-            print(f"Failed to send audio to Next.js API: {response.status_code}, {response.text}")
+        # Update to new OpenAI API method for transcription
+        transcript_text = openai.audio.transcriptions.create(
+            model="whisper-1", 
+            file=f,
+            response_format="text"
+        )
+        print(f"Transcription: {transcript_text}")
+
+        prompt = f'The user said: "{transcript_text}". Determine which of the following commands best matches the text: {", ".join(commands)}. Return only the number associated with the command, and if no command matches, return "0".'
+
+        completion_response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are an AI that identifies commands from a predefined list based on user input."},
+                {"role": "user", "content": prompt},
+            ]
+        )
+
+        command = completion_response.choices[0].message.content.strip()
+        print(f"Identified command: {command}")
+
+        await sio.emit('command', {'command': command})
+
     os.remove(audio_path)
 
 @app.route('/start-recording', methods=['POST'])
-def start_recording():
-    continuous_recording(process_audio)
+async def start_recording():
+    await continuous_recording(process_audio)
     return jsonify({"message": "Recording started"}), 200
 
+@app.route('/shutdown', methods=['POST'])
+async def shutdown():
+    # This endpoint will shut down the server when accessed.
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+    return jsonify({"message": "Server shutting down..."}), 200
+
 if __name__ == "__main__":
-    app.run(host='0.0.0.0', port=5000)
+    import uvicorn
+    uvicorn.run(sio_app, host='0.0.0.0', port=5001)

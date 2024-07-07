@@ -1,5 +1,5 @@
 import Link from "next/link"
-import debounce from "debounce";
+import debounce from "debounce"
 import { useRouter, usePathname } from "next/navigation"
 import { BiSearch, BiUser } from "react-icons/bi"
 import { AiOutlinePlus } from "react-icons/ai"
@@ -10,9 +10,10 @@ import { useUser } from "@/app/context/user"
 import { useGeneralStore } from "@/app/stores/general"
 import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl"
 import { RandomUsers } from "@/app/types"
-import useSearchProfilesByName from "@/app/hooks/useSearchProfilesByName";
+import useSearchProfilesByName from "@/app/hooks/useSearchProfilesByName"
+import io from "socket.io-client"
 
-export default function TopNav() {    
+export default function TopNav() {
     const userContext = useUser()
     const router = useRouter()
     const pathname = usePathname()
@@ -42,6 +43,35 @@ export default function TopNav() {
         router.push('/upload')
     }
 
+    useEffect(() => {
+        const socket = io("http://0.0.0.0:5001", {
+            transports: ["websocket"],
+            reconnectionAttempts: 3,
+            timeout: 10000,
+            reconnectionDelay: 1000,
+        })
+
+        socket.on("connect", () => {
+            console.log("Connected to WebSocket server")
+        })
+
+        socket.on("command", (data) => {
+            console.log("Command received:", data.command)
+            if (data.command === '1') {
+                router.push("/")
+            }
+            // Handle other commands as needed
+        })
+
+        socket.on("connect_error", (err) => {
+            console.error("Connection Error:", err)
+        })
+
+        return () => {
+            socket.disconnect()
+        }
+    }, [router])
+
     return (
         <>
             <div id="TopNav" className="fixed bg-white z-30 flex items-center w-full border-b h-[60px]">
@@ -52,34 +82,34 @@ export default function TopNav() {
                     </Link>
 
                     <div className="relative hidden md:flex items-center justify-end bg-[#F1F1F2] p-1 rounded-full max-w-[430px] w-full">
-                            <input 
-                                type="text" 
-                                onChange={handleSearchName}
-                                className="w-full pl-3 my-2 bg-transparent placeholder-[#838383] text-[15px] focus:outline-none"
-                                placeholder="Search accounts"
-                            />
+                        <input 
+                            type="text" 
+                            onChange={handleSearchName}
+                            className="w-full pl-3 my-2 bg-transparent placeholder-[#838383] text-[15px] focus:outline-none"
+                            placeholder="Search accounts"
+                        />
 
-                            {searchProfiles.length > 0 ?
-                                <div className="absolute bg-white max-w-[910px] h-auto w-full z-20 left-0 top-12 border p-1">
-                                    {searchProfiles.map((profile, index) => (
-                                        <div className="p-1" key={index}>
-                                            <Link 
-                                                href={`/profile/${profile?.id}`}
-                                                className="flex items-center justify-between w-full cursor-pointer hover:bg-[#F12B56] p-1 px-2 hover:text-white"
-                                            >
-                                                <div className="flex items-center">
-                                                    <img className="rounded-md" width="40" src={useCreateBucketUrl(profile?.image)} />
-                                                    <div className="truncate ml-2">{ profile?.name }</div>
-                                                </div>
-                                            </Link>
-                                        </div>
-                                    ))}
-                                </div>
-                            : null}
-
-                            <div className="px-3 py-1 flex items-center border-l border-l-gray-300">
-                                <BiSearch color="#A1A2A7" size="22" />
+                        {searchProfiles.length > 0 ?
+                            <div className="absolute bg-white max-w-[910px] h-auto w-full z-20 left-0 top-12 border p-1">
+                                {searchProfiles.map((profile, index) => (
+                                    <div className="p-1" key={index}>
+                                        <Link 
+                                            href={`/profile/${profile?.id}`}
+                                            className="flex items-center justify-between w-full cursor-pointer hover:bg-[#F12B56] p-1 px-2 hover:text-white"
+                                        >
+                                            <div className="flex items-center">
+                                                <img className="rounded-md" width="40" src={useCreateBucketUrl(profile?.image)} />
+                                                <div className="truncate ml-2">{ profile?.name }</div>
+                                            </div>
+                                        </Link>
+                                    </div>
+                                ))}
                             </div>
+                        : null}
+
+                        <div className="px-3 py-1 flex items-center border-l border-l-gray-300">
+                            <BiSearch color="#A1A2A7" size="22" />
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3 ">

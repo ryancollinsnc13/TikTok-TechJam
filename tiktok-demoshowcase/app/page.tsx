@@ -6,6 +6,7 @@ import { usePostStore } from "@/app/stores/post"
 import ClientOnly from "./components/ClientOnly"
 import PostMain from "./components/PostMain"
 
+
 export default function Home() {
   let { allPosts, setAllPosts } = usePostStore();
   useEffect(() => { setAllPosts()}, [])
