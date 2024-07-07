@@ -72,7 +72,7 @@ Follow these steps to run a test build of Tikki:
 
 ## ⏱ **Timeout**
 
-Please note that the application will timeout after a bit, so ensure to test your commands promptly.
+Please note that the application will timeout after a bit, so make sure to test your commands promptly.
 
 ---
 
