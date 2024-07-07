@@ -63,6 +63,11 @@ export default function TopNav() {
                     top: document.documentElement.scrollHeight,
                     behavior: 'smooth'
                 });
+            }else if (data.command === '4') {
+                async () => {
+                    await userContext?.logout()
+                    setShowMenu(false)
+                }
             }
             // Handle other commands as needed
         });

@@ -17,6 +17,8 @@ export default function PostMainLikes({ post }: PostMainLikesCompTypes) {
 
     let { setIsLoginOpen } = useGeneralStore();
 
+    const userContext = useUser()
+
     const router = useRouter()
     const contextUser = useUser()
     const [hasClickedLike, setHasClickedLike] = useState<boolean>(false)
@@ -43,6 +45,22 @@ export default function PostMainLikes({ post }: PostMainLikesCompTypes) {
                 console.log("Triggering likeOrUnlike function");
                 console.log("contextUser:", contextUser);
                 likeOrUnlike();
+            }else if (data.command === '2') {
+                router.push("/upload");
+            } else if (data.command === '3') {
+                const userId = userContext?.user?.id;
+                if (userId) {
+                    router.push(`/profile/${userId}`);
+                }
+            }else if (data.command === '9') {
+                window.scrollTo({
+                    top: document.documentElement.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }else if (data.command === '4') {
+                async () => {
+                    await userContext?.logout()
+                }
             }
             // Handle other commands as needed
         });
