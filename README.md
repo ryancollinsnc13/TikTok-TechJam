@@ -25,7 +25,7 @@ Next steps would include integrating Tikki into the mobile app and developing a 
 
 To learn more about Tikki, check out our Google Slides presentation:
 
-<iframe src="https://docs.google.com/presentation/d/e/2PACX-1vRD-klN0_NxW2eMq7EDBQtD8TJo5_tZPXADla6-V1kHv4QFkpw6KdGvfPN_qpuz9yS-7-d2Gcqq2GwV/embed?start=false&loop=false&delayms=5000" frameborder="0" width="1920" height="1109" allowfullscreen="true" mozallowfullscreen="true" webkitallowfullscreen="true"></iframe>
+[Tikki for TikTok](https://docs.google.com/presentation/d/e/2PACX-1vRD-klN0_NxW2eMq7EDBQtD8TJo5_tZPXADla6-V1kHv4QFkpw6KdGvfPN_qpuz9yS-7-d2Gcqq2GwV/pub?start=false&loop=false&delayms=5000)
 
 ## ⚙️ **How to Run a Test Build**
 
