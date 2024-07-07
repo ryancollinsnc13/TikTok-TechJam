@@ -5,8 +5,15 @@ import { useEffect } from "react"
 import Link from "next/link"
 import useCreateBucketUrl from "@/app/hooks/useCreateBucketUrl"
 import { PostUserCompTypes } from "@/app/types"
+import { useWebSocket } from "@/app/context/WebSocketContext"
+import { useRouter } from "next/navigation"
+import { useUser } from "@/app/context/user"
 
 export default function PostUser({ post }: PostUserCompTypes) {
+
+    const socket  = useWebSocket()
+    const router = useRouter()
+    const contextUser = useUser()
 
     useEffect(() => {
         const video = document.getElementById(`video${post?.id}`) as HTMLVideoElement
@@ -17,6 +24,33 @@ export default function PostUser({ post }: PostUserCompTypes) {
         }, 50)
 
     }, [])
+
+    useEffect(() => {
+        if (!socket) return;
+
+        socket.on("command", (data) => {
+            console.log("Command received:", data.command);
+            if (data.command === '1') {
+                router.push("/");
+            }else if (data.command === '2') {
+                router.push("/upload");
+            } else if (data.command === '9') {
+                window.scrollTo({
+                    top: document.documentElement.scrollHeight,
+                    behavior: 'smooth'
+                });
+            }else if (data.command === '4') {
+                async () => {
+                    await contextUser?.logout()
+                }
+            }
+            // Handle other commands as needed
+        });
+
+        return () => {
+            socket.off("command");
+        };
+    }, [socket, contextUser, post]);
 
     return (
         <>
